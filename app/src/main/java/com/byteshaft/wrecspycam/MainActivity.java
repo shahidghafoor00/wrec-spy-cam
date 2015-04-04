@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class MainActivity extends Activity {
 
     @Override

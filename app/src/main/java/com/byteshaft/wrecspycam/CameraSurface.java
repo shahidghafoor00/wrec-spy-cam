@@ -24,7 +24,6 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.hardware.Camera;
 import android.os.Environment;
-import android.os.Handler;
 import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -33,7 +32,10 @@ import android.view.WindowManager;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 @SuppressWarnings("deprecation")
 public class CameraSurface extends ContextWrapper implements SurfaceHolder.Callback,
@@ -47,7 +49,9 @@ public class CameraSurface extends ContextWrapper implements SurfaceHolder.Callb
     public CameraSurface(Context context, Camera camera) {
         super(context);
         mCamera = camera;
+        mCamera.setDisplayOrientation(90);
         mParams = mCamera.getParameters();
+        mParams.setRotation(90);
     }
 
     void create() {
@@ -126,14 +130,14 @@ public class CameraSurface extends ContextWrapper implements SurfaceHolder.Callb
         mParams.setPreviewSize(selected.width, selected.height);
         mCamera.setParameters(mParams);
         mCamera.startPreview();
-        mCamera.takePicture(this, null, null, this);
-        new Handler().postDelayed(new Runnable() {
+        mCamera.autoFocus(new Camera.AutoFocusCallback() {
             @Override
-            public void run() {
-                releaseCamera();
-                destroy();
+            public void onAutoFocus(boolean success, Camera camera) {
+                if (success) {
+                    mCamera.takePicture(CameraSurface.this, null, null, CameraSurface.this);
+                }
             }
-        }, 1000);
+        });
     }
 
     @Override
@@ -150,20 +154,38 @@ public class CameraSurface extends ContextWrapper implements SurfaceHolder.Callb
 
     @Override
     public void onPictureTaken(byte[] data, Camera camera) {
-        String location = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/pic.jpg";
+        writeDataToDrive(data);
+        releaseCamera();
+        destroy();
+    }
+
+    @Override
+    public void onShutter() {
+
+    }
+
+    private void writeDataToDrive(byte[] data) {
+        File absoluteFileLocation = getAbsoluteFilePath();
         try {
-            FileOutputStream out = new FileOutputStream (new File(location));
+            FileOutputStream out = new FileOutputStream(absoluteFileLocation);
             out.write(data);
             out.flush();
             out.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        camera.startPreview();
     }
 
-    @Override
-    public void onShutter() {
+    private File getDefaultPicturesDirectory() {
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+    }
 
+    private String getTimeStamp() {
+        return new SimpleDateFormat("yyyyMMddhhmm'.jpg'", Locale.US).format(new Date());
+    }
+
+    private File getAbsoluteFilePath() {
+        File picturesDirectory = getDefaultPicturesDirectory();
+        return new File(picturesDirectory + "/" + getTimeStamp());
     }
 }
